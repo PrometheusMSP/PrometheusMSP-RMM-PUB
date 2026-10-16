@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prometheusmsp.example/schemas/v1/event-batch.schema.json",
+  "title": "Endpoint event batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["events"],
+  "properties": {
+    "checkpoint": {"type": "string", "maxLength": 4096},
+    "events": {
+      "type": "array", "minItems": 1, "maxItems": 500,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "schema_version", "device_id", "occurred_at", "source", "severity", "message"],
+        "properties": {
+          "id": {"type": "string", "maxLength": 128}, "schema_version": {"const": "v1"},
+          "device_id": {"type": "string", "format": "uuid"}, "occurred_at": {"type": "string", "format": "date-time"},
+          "source": {"type": "string", "maxLength": 255}, "severity": {"enum": ["debug", "info", "warning", "error", "critical"]},
+          "provider": {"type": "string", "maxLength": 255}, "event_id": {"type": "string", "maxLength": 128},
+          "message": {"type": "string", "maxLength": 32768}, "tags": {"type": "object", "additionalProperties": {"type": "string"}, "maxProperties": 100}
+        }
+      }
+    }
+  }
+}

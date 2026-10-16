@@ -1,0 +1,322 @@
+openapi: 3.1.0
+info:
+  title: Prometheus MSP RMM API
+  version: 0.1.0
+  description: >-
+    MVP API for authorized endpoint management. Agent routes after enrollment require
+    mTLS. Operator routes require scoped bearer authorization. This API is not yet
+    production hardened.
+servers:
+  - url: https://rmm.example.invalid
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      security: []
+      responses:
+        '200': {description: Healthy}
+  /readyz:
+    get:
+      operationId: readiness
+      security: []
+      responses:
+        '200': {description: Database reachable and service ready}
+        '503': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/enroll:
+    post:
+      operationId: enrollAgent
+      security: []
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EnrollmentRequest'}
+      responses:
+        '201':
+          description: Device enrolled
+          content: {application/json: {schema: {$ref: '#/components/schemas/EnrollmentResponse'}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/heartbeat:
+    post:
+      operationId: recordHeartbeat
+      security: [{mutualTLS: []}]
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Heartbeat'}}}}
+      responses:
+        '204': {description: Stored}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/inventory:
+    post:
+      operationId: uploadInventory
+      security: [{mutualTLS: []}]
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Inventory'}}}}
+      responses:
+        '204': {description: Stored}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '413': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/events:
+    post:
+      operationId: uploadEvents
+      security: [{mutualTLS: []}]
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EventBatch'}}}}
+      responses:
+        '204': {description: Stored}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '413': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/jobs:
+    get:
+      operationId: pollAgentJobs
+      security: [{mutualTLS: []}]
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      responses:
+        '200':
+          description: Jobs currently eligible for this authenticated device
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobs]
+                properties: {jobs: {type: array, maxItems: 25, items: {$ref: '#/components/schemas/JobEnvelope'}}}
+        '401': {$ref: '#/components/responses/Error'}
+  /api/v1/agent/jobs/{id}/results:
+    post:
+      operationId: uploadJobResult
+      security: [{mutualTLS: []}]
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/JobResult'}}}}
+      responses:
+        '204': {description: Result stored}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/devices:
+    get:
+      operationId: listDevices
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: after, in: query, schema: {type: string}, description: Last device ID from the previous page}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Tenant-scoped page of devices
+          content: {application/json: {schema: {$ref: '#/components/schemas/DevicePage'}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/v1/devices/{id}:
+    get:
+      operationId: getDevice
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Device, content: {application/json: {schema: {$ref: '#/components/schemas/Device'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/devices/{id}/inventory:
+    get:
+      operationId: getDeviceInventory
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Latest inventory, content: {application/json: {schema: {$ref: '#/components/schemas/Inventory'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/devices/{id}/events:
+    get:
+      operationId: listDeviceEvents
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {name: severity, in: query, schema: {type: string}}
+        - {name: before, in: query, schema: {type: string, format: date-time}}
+      responses:
+        '200':
+          description: Tenant-scoped device events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties: {events: {type: array, items: {type: object}}}
+        '404': {$ref: '#/components/responses/Error'}
+  /api/v1/enrollment-tokens:
+    post:
+      operationId: createEnrollmentToken
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties: {expires_at: {type: string, format: date-time, description: Must be within 24 hours}}
+      responses:
+        '201':
+          description: Short-lived tenant-scoped enrollment token; returned only once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expires_at]
+                properties: {token: {type: string}, expires_at: {type: string, format: date-time}}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/v1/jobs:
+    get:
+      operationId: listJobs
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {$ref: '#/components/parameters/Limit'}
+        - {name: device_id, in: query, schema: {type: string, format: uuid}}
+        - {name: status, in: query, schema: {type: string, enum: [pending, approved, dispatched, completed, cancelled]}}
+      responses:
+        '200':
+          description: Tenant-scoped jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobs]
+                properties: {jobs: {type: array, items: {$ref: '#/components/schemas/Job'}}}
+    post:
+      operationId: createJob
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [device_id, action, parameters]
+              properties:
+                device_id: {type: string, format: uuid}
+                action: {type: string, enum: [service.restart, temp.cleanup, device.reboot, software.install, software.remove, patch.install]}
+                parameters: {type: object}
+                risk: {type: string, enum: [medium, high], description: Optional; must match the server action catalog}
+                expires_at: {type: string, format: date-time, description: Optional; must be within 24 hours}
+      responses:
+        '201': {description: Created; may await approval, content: {application/json: {schema: {$ref: '#/components/schemas/Job'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+  /api/v1/jobs/{id}/approve:
+    post:
+      operationId: approveJob
+      parameters:
+        - {$ref: '#/components/parameters/CorrelationID'}
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Approved and signed, content: {application/json: {schema: {$ref: '#/components/schemas/Job'}}}}
+        '403': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /api/v1/audit:
+    get:
+      operationId: listAuditEvents
+      parameters: [{$ref: '#/components/parameters/CorrelationID'}, {$ref: '#/components/parameters/Limit'}]
+      responses:
+        '200':
+          description: Tenant-scoped immutable audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [audit_events]
+                properties: {audit_events: {type: array, items: {type: object}}}
+components:
+  securitySchemes:
+    mutualTLS: {type: mutualTLS, description: Per-device certificate issued at enrollment}
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: opaque scoped access token}
+  parameters:
+    CorrelationID: {name: X-Correlation-ID, in: header, required: false, schema: {type: string, maxLength: 128}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+  responses:
+    Error:
+      description: Error response
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties: {error: {type: string}, correlation_id: {type: string}}
+    EnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required: [token, name, platform, public_key_pem, agent_version]
+      properties:
+        token: {type: string, minLength: 16}
+        name: {type: string, minLength: 1, maxLength: 255}
+        platform: {type: string, enum: [windows, linux]}
+        public_key_pem: {type: string, maxLength: 8192}
+        labels: {type: object, additionalProperties: {type: string}, maxProperties: 50}
+        agent_version: {type: string, maxLength: 64}
+    EnrollmentResponse:
+      type: object
+      required: [device_id, tenant_id, certificate_pem, ca_certificate_pem, server_signing_key, poll_seconds]
+      properties:
+        device_id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        certificate_pem: {type: string}
+        ca_certificate_pem: {type: string}
+        server_signing_key: {type: string}
+        poll_seconds: {type: integer, minimum: 10}
+    Heartbeat:
+      type: object
+      required: [schema_version, device_id, agent_version, observed_at, uptime_seconds, queue_depth]
+      properties:
+        schema_version: {const: v1}
+        device_id: {type: string, format: uuid}
+        agent_version: {type: string}
+        observed_at: {type: string, format: date-time}
+        uptime_seconds: {type: integer, minimum: 0}
+        queue_depth: {type: integer, minimum: 0}
+    Inventory: {type: object, description: See schemas/v1/inventory.schema.json}
+    EventBatch: {type: object, description: See schemas/v1/event-batch.schema.json}
+    JobEnvelope: {type: object, description: See schemas/v1/job-envelope.schema.json}
+    JobResult:
+      type: object
+      required: [job_id, device_id, started_at, completed_at, status, exit_code]
+      properties:
+        job_id: {type: string, format: uuid}
+        device_id: {type: string, format: uuid}
+        started_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+        status: {type: string, enum: [succeeded, failed, rejected, timed_out, cancelled]}
+        exit_code: {type: integer}
+        output: {type: string, maxLength: 65536}
+        error: {type: string, maxLength: 8192}
+        integrity: {type: object, additionalProperties: {type: string}}
+    Device:
+      type: object
+      required: [id, tenant_id, name, platform, agent_version, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        tenant_id: {type: string, format: uuid}
+        name: {type: string}
+        platform: {type: string}
+        agent_version: {type: string}
+        labels: {type: object, additionalProperties: {type: string}}
+        created_at: {type: string, format: date-time}
+        last_seen_at: {type: [string, 'null'], format: date-time}
+    DevicePage:
+      type: object
+      required: [devices]
+      properties: {devices: {type: array, items: {$ref: '#/components/schemas/Device'}}}
+    Job:
+      type: object
+      required: [envelope, status, requested_by]
+      properties:
+        envelope: {$ref: '#/components/schemas/JobEnvelope'}
+        status: {type: string, enum: [pending, approved, dispatched, completed, cancelled]}
+        requested_by: {type: string}

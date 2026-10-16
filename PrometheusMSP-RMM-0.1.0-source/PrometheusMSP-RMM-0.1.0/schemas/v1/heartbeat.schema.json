@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prometheusmsp.example/schemas/v1/heartbeat.schema.json",
+  "title": "Agent heartbeat",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "device_id", "agent_version", "observed_at", "uptime_seconds", "queue_depth"],
+  "properties": {
+    "schema_version": {"const": "v1"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "agent_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "uptime_seconds": {"type": "integer", "minimum": 0},
+    "queue_depth": {"type": "integer", "minimum": 0}
+  }
+}

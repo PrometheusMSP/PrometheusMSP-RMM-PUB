@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prometheusmsp.example/schemas/v1/webhook.schema.json",
+  "title": "Base44 webhook envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "occurred_at", "tenant_id", "data"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "type": {"enum": ["device.enrolled", "device.state_changed", "alert.created", "job.completed", "patch.completed"]},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "tenant_id": {"type": "string", "format": "uuid"},
+    "data": {"type": "object"}
+  }
+}

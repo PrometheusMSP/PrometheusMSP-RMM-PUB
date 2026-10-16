@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prometheusmsp.example/schemas/v1/inventory.schema.json",
+  "title": "Endpoint inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "device_id", "collected_at", "hostname", "os", "hardware", "disks", "networks"],
+  "properties": {
+    "schema_version": {"const": "v1"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "hostname": {"type": "string", "minLength": 1, "maxLength": 255},
+    "os": {"type": "object", "required": ["name", "version", "architecture"], "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "build": {"type": "string"}, "architecture": {"type": "string"}}},
+    "hardware": {"type": "object", "required": ["cpus", "memory_bytes"], "properties": {"cpus": {"type": "integer", "minimum": 1}, "memory_bytes": {"type": "integer", "minimum": 0}, "machine_id": {"type": "string"}}},
+    "disks": {"type": "array", "maxItems": 256, "items": {"type": "object"}},
+    "networks": {"type": "array", "maxItems": 256, "items": {"type": "object"}},
+    "services": {"type": "array", "maxItems": 500, "items": {"type": "object", "required": ["name", "status"], "properties": {"name": {"type": "string"}, "status": {"type": "string"}}}},
+    "software": {"type": "array", "maxItems": 500, "items": {"type": "object", "required": ["name", "version"], "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "publisher": {"type": "string"}}}},
+    "processes": {"type": "array", "maxItems": 500, "items": {"type": "object", "additionalProperties": false, "required": ["pid", "name"], "properties": {"pid": {"type": "integer", "minimum": 0}, "name": {"type": "string", "maxLength": 1024}}}},
+    "metadata": {"type": "object", "additionalProperties": {"type": "string"}, "maxProperties": 100}
+  }
+}

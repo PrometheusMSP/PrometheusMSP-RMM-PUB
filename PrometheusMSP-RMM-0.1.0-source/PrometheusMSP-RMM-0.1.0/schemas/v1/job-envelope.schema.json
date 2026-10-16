@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prometheusmsp.example/schemas/v1/job-envelope.schema.json",
+  "title": "Signed job envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tenant_id", "device_id", "issued_at", "expires_at", "nonce", "action", "parameters", "risk", "signature"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "tenant_id": {"type": "string", "format": "uuid"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 16, "maxLength": 256},
+    "action": {"enum": ["service.restart", "temp.cleanup", "device.reboot", "software.install", "software.remove", "patch.install"]},
+    "parameters": {"type": "object"},
+    "risk": {"enum": ["low", "medium", "high", "critical"]},
+    "approved_by": {"type": "string", "maxLength": 200},
+    "signature": {"type": "string", "contentEncoding": "base64"}
+  }
+}
