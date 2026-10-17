@@ -16,7 +16,11 @@ func TestConfigRequiresHTTPS(t *testing.T) {
 
 func TestBootstrapClientRejectsInvalidCA(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ca.pem")
-	if err := os.WriteFile(path, []byte("not a certificate"), 0600); err != nil { t.Fatal(err) }
+	if err := os.WriteFile(path, []byte("not a certificate"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	_, err := NewBootstrapClient(Config{ServerURL: "https://control.example.test", BootstrapCAFile: path})
-	if err == nil || !strings.Contains(err.Error(), "no valid certificates") { t.Fatalf("expected invalid CA error, got %v", err) }
+	if err == nil || !strings.Contains(err.Error(), "no valid certificates") {
+		t.Fatalf("expected invalid CA error, got %v", err)
+	}
 }

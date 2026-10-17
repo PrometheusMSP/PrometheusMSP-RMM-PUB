@@ -2,9 +2,9 @@ package agentcore
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -70,13 +70,45 @@ func ConfigFromEnv() (Config, error) {
 
 func defaultStateDir() string {
 	if os.PathSeparator == '\\' {
-		if d := os.Getenv("ProgramData"); d != "" { return filepath.Join(d, "PrometheusMSP", "Agent") }
+		if d := os.Getenv("ProgramData"); d != "" {
+			return filepath.Join(d, "PrometheusMSP", "Agent")
+		}
 	}
 	return "/var/lib/prometheus-rmm-agent"
 }
 
-func envOr(k, d string) string { if v := os.Getenv(k); v != "" { return v }; return d }
-func durationOr(k string, d time.Duration) time.Duration { if v, e := time.ParseDuration(os.Getenv(k)); e == nil { return v }; return d }
-func int64Or(k string, d int64) int64 { if v, e := strconv.ParseInt(os.Getenv(k), 10, 64); e == nil { return v }; return d }
-func boolOr(k string, d bool) bool { if v := os.Getenv(k); v != "" { if b, e := strconv.ParseBool(v); e == nil { return b } }; return d }
-func splitCSV(v string) []string { var out []string; for _, p := range strings.Split(v, ",") { if p = strings.TrimSpace(p); p != "" { out = append(out, p) } }; return out }
+func envOr(k, d string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return d
+}
+func durationOr(k string, d time.Duration) time.Duration {
+	if v, e := time.ParseDuration(os.Getenv(k)); e == nil {
+		return v
+	}
+	return d
+}
+func int64Or(k string, d int64) int64 {
+	if v, e := strconv.ParseInt(os.Getenv(k), 10, 64); e == nil {
+		return v
+	}
+	return d
+}
+func boolOr(k string, d bool) bool {
+	if v := os.Getenv(k); v != "" {
+		if b, e := strconv.ParseBool(v); e == nil {
+			return b
+		}
+	}
+	return d
+}
+func splitCSV(v string) []string {
+	var out []string
+	for _, p := range strings.Split(v, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}

@@ -93,7 +93,7 @@ func (p *Postgres) SaveEvents(ctx context.Context, tenantID, deviceID string, ba
 	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM devices WHERE tenant_id=$1 AND id=$2)`, tenantID, deviceID).Scan(&exists); err != nil { return err }
 	if !exists { return ErrNotFound }
 	for _, event := range batch.Events {
-		payload, err := json.Marshal(event); if err != nil { return err }
+		payload, err := marshalEventForJSONB(event); if err != nil { return err }
 		_, err = tx.Exec(ctx, `INSERT INTO events(id,tenant_id,device_id,occurred_at,source,severity,payload)
 			VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tenant_id,device_id,id) DO NOTHING`,
 			event.ID, tenantID, deviceID, event.OccurredAt, event.Source, event.Severity, payload)
@@ -107,7 +107,7 @@ func (p *Postgres) SaveEvents(ctx context.Context, tenantID, deviceID string, ba
 
 func (p *Postgres) ListDevices(ctx context.Context, tenantID string, limit int, after string) ([]Device, error) {
 	rows, err := p.pool.Query(ctx, `SELECT id,tenant_id,name,platform,agent_version,labels,created_at,last_seen_at
-		FROM devices WHERE tenant_id=$1 AND id>$2 ORDER BY id LIMIT $3`, tenantID, after, limit)
+		FROM devices WHERE tenant_id=$1 AND (NULLIF($2::text, '') IS NULL OR id > NULLIF($2::text, '')::uuid) ORDER BY id LIMIT $3`, tenantID, after, limit)
 	if err != nil { return nil, err }; defer rows.Close()
 	var out []Device
 	for rows.Next() {

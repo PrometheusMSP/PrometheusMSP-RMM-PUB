@@ -14,6 +14,9 @@ Copy-Item -Force $BinaryPath (Join-Path $installDir 'prometheus-rmm-agent.exe')
 $token = [System.Net.NetworkCredential]::new('', $EnrollmentToken).Password
 $acl = Get-Acl $stateDir
 $acl.SetAccessRuleProtection($true, $false)
+foreach ($existingRule in @($acl.Access)) {
+    $acl.RemoveAccessRuleSpecific($existingRule) | Out-Null
+}
 $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new('SYSTEM','FullControl','ContainerInherit,ObjectInherit','None','Allow'))
 $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new('BUILTIN\Administrators','FullControl','ContainerInherit,ObjectInherit','None','Allow'))
 Set-Acl $stateDir $acl
